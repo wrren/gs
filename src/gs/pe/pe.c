@@ -102,13 +102,14 @@ PGS_PE GsPeReadFromFile(
         return NULL;
     }
 
+    GsArenaAddCleanupTask(Arena, CloseHandle, FileHandle);
+
     PGS_PE PE = (PGS_PE) GsArenaAlloc(Arena, sizeof(GS_PE));
     if(PE == NULL) {
         if(Error != NULL) {
             *Error = GsPeMemoryAllocationError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
     PE->Arena = Arena;
@@ -121,7 +122,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeFileReadError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -130,7 +130,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeFileReadError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -139,7 +138,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeInvalidFileFormatError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -148,7 +146,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeFileReadError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -157,7 +154,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeInvalidFileFormatError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -166,7 +162,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeInvalidFileFormatError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -175,7 +170,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeInvalidFileFormatError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -184,7 +178,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeUnhandledMachineError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -193,7 +186,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeInvalidFileFormatError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -203,7 +195,6 @@ PGS_PE GsPeReadFromFile(
             *Error = GsPeMemoryAllocationError;
         }
         GsArenaRelease(Arena);
-        CloseHandle(FileHandle);
         return NULL;
     }
 
@@ -213,7 +204,6 @@ PGS_PE GsPeReadFromFile(
                 *Error = GsPeFileReadError;
             }
             GsArenaRelease(Arena);
-            CloseHandle(FileHandle);
             return NULL;
         }
 
@@ -223,7 +213,6 @@ PGS_PE GsPeReadFromFile(
                 *Error = GsPeMemoryAllocationError;
             }
             GsArenaRelease(Arena);
-            CloseHandle(FileHandle);
             return NULL;
         }
 
@@ -234,7 +223,6 @@ PGS_PE GsPeReadFromFile(
                 *Error = GsPeFileReadError;
             }
             GsArenaRelease(Arena);
-            CloseHandle(FileHandle);
             return NULL;
         }
 
@@ -243,7 +231,6 @@ PGS_PE GsPeReadFromFile(
                 *Error = GsPeFileReadError;
             }
             GsArenaRelease(Arena);
-            CloseHandle(FileHandle);
             return NULL;
         }
 
@@ -252,7 +239,6 @@ PGS_PE GsPeReadFromFile(
                 *Error = GsPeFileReadError;
             }
             GsArenaRelease(Arena);
-            CloseHandle(FileHandle);
             return NULL;
         }
     }

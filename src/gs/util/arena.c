@@ -98,7 +98,7 @@ PVOID GsArenaRealloc(
     return NewBuffer;
 }
 
-BOOL GsArenaAddGseanupTask(
+BOOL GsArenaAddCleanupTask(
     _Inout_ PGS_ARENA           Arena,
     _In_ GS_ARENA_CLEANUP_FUNC  CleanupFunction,
     _In_ PVOID                  Argument
