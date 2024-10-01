@@ -20,7 +20,8 @@ typedef enum {
     GsPeSerializationError,
     GsPeListInsertionError,
     GsPeImportResolutionError,
-    GsPeEntryPointCallError
+    GsPeEntryPointCallError,
+    GsPeImageNotLoadedError
 } GsPeError;
 
 /**
@@ -91,7 +92,7 @@ PGS_PE GsPeReadFromMemory(
 /**
  * @brief Load the given PE into the address space of this process.
  * 
- * @param Pe            PE to be loaded
+ * @param PE            PE to be loaded
  * @param EntryPoint    Output pointer to the entry point of the loaded image
  * @param Exports       Output list of exports for the loaded image
  * @param Error         Output error set when loading is unsuccessful
@@ -99,9 +100,31 @@ PGS_PE GsPeReadFromMemory(
  */
 _Success_(return != NULL)
 PVOID GsPeLoad(
-    _In_ PGS_PE             Pe,
+    _In_ PGS_PE             PE,
     _Inout_ PGS_LIST        Exports,
     _Outptr_opt_ GsPeError* Error            
+);
+
+/**
+ * @brief Resolve the imports for the given PE Image
+ * 
+ * @param PE                PE image struct
+ * @return GsPeSuccess     On success
+ */
+_Success_(return == GsPeSuccess)
+GsPeError GsPeResolveImports(
+    _In_ PGS_PE             PE
+);
+
+/**
+ * @brief Call the EntryPoint/DLL Attach function for the given loaded PE image
+ * 
+ * @param PE            PE Image
+ * @return GsPeSuccess  On success 
+ */
+_Success_(return == GsPeSuccess)
+GsPeError GsPeAttach(
+    _In_ PGS_PE             PE
 );
 
 /**

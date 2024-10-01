@@ -369,7 +369,6 @@ PVOID GsPeLoad(
 )
 {
     SIZE_T ImageSize    = ImageSize = PE->OptionalHeader.SizeOfImage;
-    DWORD EntryPointRVA = PE->OptionalHeader.AddressOfEntryPoint;
     
     PVOID ImageBase = GsArenaAlloc(PE->Arena, PE->OptionalHeader.SizeOfImage);
     if(ImageBase == NULL) {
@@ -434,28 +433,31 @@ PVOID GsPeLoad(
         return NULL;
     }
 
-    GsPeError ImportResolutionResult = GsPepResolveImports(ImageBase, PE);
-    if(ImportResolutionResult) {
-        if(Error != NULL) {
-            *Error = ImportResolutionResult;
-        }
-        return NULL;
-    }
-
-    if(EntryPointRVA != 0 && PE->FileHeader.Characteristics & IMAGE_FILE_DLL) {
-        GsLibraryEntryPoint DllMain = GS_RVA_CAST(ImageBase, GsLibraryEntryPoint, EntryPointRVA);
-
-        if(DllMain((HINSTANCE) ImageBase, DLL_PROCESS_ATTACH, NULL) != TRUE){
-            if(Error != NULL) {
-                *Error = GsPeEntryPointCallError;
-            }
-            return NULL;
-        }
-    }
-
     PE->ImageBase = ImageBase;
 
     return ImageBase;
+}
+
+_Success_(return == GsPeSuccess)
+GsPeError GsPeAttach(
+    _In_ PGS_PE PE
+)
+{
+    if(PE->ImageBase == NULL) {
+        return GsPeImageNotLoadedError;
+    }
+
+    DWORD EntryPointRVA = PE->OptionalHeader.AddressOfEntryPoint;
+
+    if(EntryPointRVA != 0 && PE->FileHeader.Characteristics & IMAGE_FILE_DLL) {
+        GsLibraryEntryPoint DllMain = GS_RVA_CAST(PE->ImageBase, GsLibraryEntryPoint, EntryPointRVA);
+
+        if(DllMain((HINSTANCE) PE->ImageBase, DLL_PROCESS_ATTACH, NULL) != TRUE){
+            return GsPeEntryPointCallError;
+        }
+    }
+
+    return GsPeSuccess;
 }
 
 VOID GsPeUnload(
@@ -505,29 +507,32 @@ GsPeError GsPepApplyRelocations(
 }
 
 _Success_(return == GsPeSuccess)
-GsPeError GsPepResolveImports(
-    _In_ PVOID ImageBase,
+GsPeError GsPeResolveImports(
     _In_ PGS_PE PE
 )
 {
+    if(PE->ImageBase == NULL) {
+        return GsPeImageNotLoadedError;
+    }
+
     IMAGE_DATA_DIRECTORY ImportDirectory        = PE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
     IMAGE_DATA_DIRECTORY BoundImportDirectory   = PE->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT];
 
     if(ImportDirectory.Size > 0) {
-        PIMAGE_IMPORT_DESCRIPTOR ImportDescriptor = GS_RVA_CAST(ImageBase, PIMAGE_IMPORT_DESCRIPTOR, ImportDirectory.VirtualAddress);
+        PIMAGE_IMPORT_DESCRIPTOR ImportDescriptor = GS_RVA_CAST(PE->ImageBase, PIMAGE_IMPORT_DESCRIPTOR, ImportDirectory.VirtualAddress);
         IMAGE_IMPORT_DESCRIPTOR Sentinel;
         ZeroMemory(&Sentinel, sizeof(IMAGE_IMPORT_DESCRIPTOR));
 
         while(memcmp(ImportDescriptor, &Sentinel, sizeof(IMAGE_IMPORT_DESCRIPTOR)) != 0) {
-            LPCSTR LibraryName = (LPCSTR)((PUINT8) ImageBase) + ImportDescriptor->Name;
+            LPCSTR LibraryName = (LPCSTR)((PUINT8) PE->ImageBase) + ImportDescriptor->Name;
             PGS_LIBRARY Library = GsLibraryLoad(LibraryName);
 
             if(Library == NULL) {
                 return GsPeImportResolutionError;
             }
 
-            PIMAGE_THUNK_DATA OriginalThunk = GS_RVA_CAST(ImageBase, PIMAGE_THUNK_DATA, ImportDescriptor->OriginalFirstThunk);
-            PIMAGE_THUNK_DATA Thunk         = GS_RVA_CAST(ImageBase, PIMAGE_THUNK_DATA, ImportDescriptor->FirstThunk);
+            PIMAGE_THUNK_DATA OriginalThunk = GS_RVA_CAST(PE->ImageBase, PIMAGE_THUNK_DATA, ImportDescriptor->OriginalFirstThunk);
+            PIMAGE_THUNK_DATA Thunk         = GS_RVA_CAST(PE->ImageBase, PIMAGE_THUNK_DATA, ImportDescriptor->FirstThunk);
             while(OriginalThunk->u1.Ordinal != 0 && GS_RVA_IS_VALID(PE, OriginalThunk->u1.AddressOfData)) {
                 if(OriginalThunk->u1.AddressOfData & 0x0000000000000001) {
                     WORD Ordinal = OriginalThunk->u1.Ordinal >> 48;
@@ -539,7 +544,7 @@ GsPeError GsPepResolveImports(
 
                     Thunk->u1.Function = (ULONGLONG) FunctionAddress;
                 } else {
-                    PIMAGE_IMPORT_BY_NAME ImportByName = GS_RVA_CAST(ImageBase, PIMAGE_IMPORT_BY_NAME, OriginalThunk->u1.AddressOfData);
+                    PIMAGE_IMPORT_BY_NAME ImportByName = GS_RVA_CAST(PE->ImageBase, PIMAGE_IMPORT_BY_NAME, OriginalThunk->u1.AddressOfData);
                     printf("Function Name: %s\n", (LPCSTR) &(ImportByName->Name));
                     PVOID FunctionAddress = GsLibraryGetFunctionAddressByName(Library, (LPCSTR) &(ImportByName->Name));
                     if(FunctionAddress == NULL) {

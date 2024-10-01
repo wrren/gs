@@ -168,6 +168,8 @@ PGS_LIBRARY GsLibraryLoadFromPath(
     _In_z_ LPCWSTR LibraryPath
 )
 {
+    GsPeError Error = GsPeSuccess;;
+
     PGS_LIBRARY Match = (PGS_LIBRARY) GsListFindIf(GsLibraryContext.LoadedLibraries, GspLibraryFind, (PVOID) LibraryPath);
     if(Match != NULL) {
         return Match;
@@ -198,15 +200,27 @@ PGS_LIBRARY GsLibraryLoadFromPath(
         return NULL;
     }
 
-    GsPeError LoadError;
+    
     Library->Image      = PE;
-    Library->ImageBase  = GsPeLoad(PE, Library->Exports, &LoadError);
+    Library->ImageBase  = GsPeLoad(PE, Library->Exports, &Error);
     if(Library->ImageBase == NULL) {
-        wprintf(L"Failed to Load Library %ws: %d\n", Library->Path->Content, LoadError);
+        wprintf(L"Failed to Load Library %ws: %d\n", Library->Path->Content, Error);
         return NULL;
     }    
 
     GsListInsert(GsLibraryContext.LoadedLibraries, Library);
+
+    Error = GsPeResolveImports(PE);
+    if(Error != GsPeSuccess) {
+        wprintf(L"Failed to resolve library imports for %ws: %d\n", Library->Path->Content, Error);
+        return NULL;
+    }
+
+    Error = GsPeAttach(PE);
+    if(Error != GsPeSuccess) {
+        wprintf(L"Failed to call entry point for %ws: %d\n", Library->Path->Content, Error);
+        return NULL;
+    }
 
     wprintf(L"Loaded Library %ws\n", Library->Path->Content);
 

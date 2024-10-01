@@ -39,7 +39,7 @@ PGS_LIBRARY GsLibraryLoadFromPath(
 );
 
 /**
- * @brief Get the address of the function with the specified name from the given loaded library.
+ * @brief Get the address of the exported function with the specified name from the given loaded library.
  * 
  * @param Library       Library loaded using `GsLibraryLoad`
  * @param FunctionName  Name of the exported function whose address is to be retrieved

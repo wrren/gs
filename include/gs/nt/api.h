@@ -265,6 +265,14 @@ typedef struct _OBJECT_ATTRIBUTES {
 typedef OBJECT_ATTRIBUTES* POBJECT_ATTRIBUTES;
 typedef CONST OBJECT_ATTRIBUTES* PCOBJECT_ATTRIBUTES;
 
+typedef struct _IO_STATUS_BLOCK {
+  union {
+    NTSTATUS Status;
+    PVOID    Pointer;
+  };
+  ULONG_PTR Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
 //++
 //
 // VOID
