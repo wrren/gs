@@ -20,6 +20,7 @@ typedef enum {
     GsPeSerializationError,
     GsPeListInsertionError,
     GsPeImportResolutionError,
+    GsPeExportResolutionError,
     GsPeEntryPointCallError,
     GsPeImageNotLoadedError
 } GsPeError;

@@ -148,6 +148,10 @@ PGS_LIBRARY GsLibraryLoad(
         MAX_PATH
     );
 
+    if(StrStrIW(LibraryNameWide, L".DLL") == NULL) {
+        StrCatW(LibraryNameWide, L".DLL");
+    }
+
     PGS_WSTRING LibraryPath = GsWStringInit(Scratch);
     if(LibraryPath == NULL) {
         GsArenaRelease(Scratch);
@@ -268,7 +272,7 @@ BOOL GspLibraryFind(
         return FALSE;
     }
 
-    return wcsncmp(Library->Path->Content, Path, Library->Path->Length) == 0;
+    return _wcsnicmp(Library->Path->Content, Path, Library->Path->Length) == 0;
 }
 
 _Success_(return == TRUE)

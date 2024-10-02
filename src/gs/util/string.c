@@ -157,7 +157,7 @@ GsStringError GsStringConcatN(
     }  
     
     if(String->Length > 0) {
-        if(strncat_s(String->Content, String->Length, Content, ContentLength)) {
+        if(strncat_s(String->Content, String->Capacity, Content, ContentLength)) {
             return GsStringConcatenationError;
         }
     } else {

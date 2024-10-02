@@ -3,8 +3,9 @@
 #include <gs/loader/lib.h>
 #include <stdio.h>
 
-#define GS_RVA_CAST(ImageBase, Type, Offset) (Type)(((PUINT8) ImageBase) + Offset)
+#define GS_RVA_CAST(ImageBase, Type, Offset) (Type)(((PUINT8) ImageBase) + ((UINT_PTR)Offset))
 #define GS_RVA_IS_VALID(PE, Offset) (Offset <= PE->OptionalHeader.SizeOfImage)
+#define GS_RVA_IN_RANGE(RVA, Start, Size) ((((UINT_PTR)RVA) >= Start) && (((UINT_PTR)RVA) <= (Start + Size)))
 
 /**
  * @brief Signature for a DLL entry point
@@ -600,13 +601,46 @@ GsPeError GsPepResolveExports(
         WORD Ordinal            = NameOrdinalsTable[i];
         PDWORD FunctionAddress  = GS_RVA_CAST(ImageBase, PDWORD, ExportAddressTable[Ordinal]);
 
-        GsStringConcat(Export.Name, ExportName);
-        Export.Address  = FunctionAddress;
-        Export.Ordinal  = Ordinal;
+        // Check whether this is a forwarded export
+        if(GS_RVA_IN_RANGE(ExportAddressTable[Ordinal], ExportDataDirectory.VirtualAddress, ExportDataDirectory.Size)) {
+            PCHAR ForwardedName = (PCHAR) FunctionAddress;
+            PGS_STRING ForwardedNameString = GsStringInitWithContent(PE->Arena, ForwardedName);
+            SIZE_T DotOffset = GsStringFindFirstOf(ForwardedNameString, 0, ".");
 
-        GsListError InsertError = GsListInsert(Exports, &Export);
-        if(InsertError != GsListSuccess) {
-            return GsPeListInsertionError;
+            if(DotOffset == SIZE_MAX) {
+                return GsPeInvalidFileFormatError;
+            }
+
+            PGS_STRING  LibraryName = GsStringInitWithContentN(PE->Arena, ForwardedNameString->Content, DotOffset);
+            PGS_STRING  FunctionName = GsStringInitWithContent(PE->Arena, ForwardedNameString->Content + DotOffset + 1);
+            PGS_LIBRARY Library = GsLibraryLoad(LibraryName->Content);
+
+            if(Library == NULL) {
+                return GsPeExportResolutionError;
+            }
+
+            PVOID ExportAddress = GsLibraryGetFunctionAddressByName(Library, FunctionName->Content);
+            if(ExportAddress == NULL) {
+                return GsPeExportResolutionError;
+            }
+
+            GsStringConcat(Export.Name, ExportName);
+            Export.Address  = ExportAddress;
+            Export.Ordinal  = Ordinal;
+
+            GsListError InsertError = GsListInsert(Exports, &Export);
+            if(InsertError != GsListSuccess) {
+                return GsPeListInsertionError;
+            }
+        } else {
+            GsStringConcat(Export.Name, ExportName);
+            Export.Address  = FunctionAddress;
+            Export.Ordinal  = Ordinal;
+
+            GsListError InsertError = GsListInsert(Exports, &Export);
+            if(InsertError != GsListSuccess) {
+                return GsPeListInsertionError;
+            }
         }
     }
 
